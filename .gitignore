@@ -1,0 +1,44 @@
+
+# =======================================================
+# GitIgnore '.gitignore'
+#     Fabien B. <fabien.bavent@gmail.com>
+#
+# This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# =======================================================
+
+# -------------------------------------------------------
+# We work with black-listed folders but white-listed files
+*
+!*/
+
+# -------------------------------------------------------
+# Remove classic directory
+.*/
+[Bb]in/
+[Nn]ode_modules/
+
+# -------------------------------------------------------
+# Add repository files
+!.gitignore
+!.travis.yml
+!README*
+!LICENSE*
+!COPYING*
+!CONTRIB*
+!Makefile
+
+# -------------------------------------------------------
+# Add all possible source files
+!*.js
+!*.json
+
+# -------------------------------------------------------
+# Add building information and scripts
+!*.mk
+!*.xml
+!*.md
+
+# -------------------------------------------------------
+# -------------------------------------------------------
