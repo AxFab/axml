@@ -1,0 +1,21 @@
+{
+  "name": "axml",
+  "version": "0.0.0",
+  "description": "Xml Parser - convert Xml to JsonML.",
+  "main": "axml.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AxFab/axml"
+  },
+  "keywords": [
+    "xml",
+    "parser",
+    "jsonml"
+  ],
+  "author": "Fabien B. <fabien.bavent@gmail.com>",
+  "license": "BSD",
+  "bugs": {
+    "url": "https://github.com/AxFab/axml/issues"
+  },
+  "homepage": "https://github.com/AxFab/axml"
+}
