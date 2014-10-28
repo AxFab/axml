@@ -3,9 +3,9 @@
 
 Xml parser and serializer, JsonML.
 
-[![Npm version](https://badge.fury.io/js/axml.svg)](https://badge.fury.io/js/axml) 
+[![Npm version](https://badge.fury.io/js/axml.svg)](1) 
 &nbsp; 
-[![Build Status](https://api.travis-ci.org/AxFab/axml.svg?branch=master)](http://travis-ci.org/axfab/axml)
+[![Build Status](https://api.travis-ci.org/AxFab/axml.svg?branch=master)](2)
 
 ## Overview
 
@@ -46,7 +46,7 @@ var str = axml.stringify(data, { eol:'\n', tabs:'  ', depth:0 })
 ### Stream API
 If you wish to have better control on the process, you can create a parser 
 instance. This instance is a `stream.Transform` object. You can know more on  
-[Node.Js documentation](http://nodejs.org/api/stream.html#stream_class_stream_transform).
+[Node.Js documentation](3).
 ```js
 var axml = require ('axml')
 
@@ -103,12 +103,61 @@ function my_parser (parser, node) {
 }
 ```
 
+
+## JsonML
+
+JsonML, the JSON Markup Language is a lightweight markup language used to map 
+between XML (Extensible Markup Language) and 
+JSON (JavaScript Object Notation)[^wikipedia].
+
+JsonML allows any XML document to be represented uniquely as a JSON string. 
+The syntax uses:
+
+- JSON arrays to represent XML elements;
+-  JSON objects to represent attributes;
+-  JSON strings to represent text nodes.
+
+XML
+```xml
+<person created="2006-11-11T19:23" modified="2006-12-31T23:59">
+    <firstName>Robert</firstName>
+    <lastName>Smith</lastName>
+    <address type="home">
+        <street>12345 Sixth Ave</street>
+        <city>Anytown</city>
+        <state>CA</state>
+        <postalCode>98765-4321</postalCode>
+    </address>
+</person>
+```
+
+JsonML
+```js
+["person",
+  {"created":"2006-11-11T19:23",
+   "modified":"2006-12-31T23:59"},
+  ["firstName", "Robert"],
+  ["lastName", "Smith"],
+  ["address", {"type":"home"},
+    ["street", "12345 Sixth Ave"],
+    ["city", "Anytown"],
+    ["state", "CA"],
+    ["postalCode", "98765-4321"]
+  ]
+]
+```
+
+
 ## License
 This code is under the modified BSD license.
 
 
 
 
+ [^wikipedia]: the definition of JsonMl is base on the [Wikipedia article][4]
 
-
+ [1]: https://badge.fury.io/js/axml
+ [2]: http://travis-ci.org/axfab/axml
+ [3]: http://nodejs.org/api/stream.html#stream_class_stream_transform
+ [4]: http://en.wikipedia.org/wiki/JsonML
 
