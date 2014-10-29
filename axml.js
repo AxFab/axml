@@ -322,6 +322,44 @@
     return str
   }
 
+  // Helper function ======================================================
+  axml.start = function (data) {
+    if (Object.prototype.toString.call(data) !== '[object Array]' || 
+        typeof data[0] !== 'string')
+      throw new Error('Type error, this is not a JsonML Element')
+    if (Object.prototype.toString.call(data[1]) !== '[object Object]')
+      return 2
+    return 1
+  }
+
+  // ----------------------------------------------------------------------
+  axml.name = function (data) {
+    if (Object.prototype.toString.call(data) !== '[object Array]' || 
+        typeof data[0] !== 'string')
+      throw new Error('Type error, this is not a JsonML Element')
+    return data[0]
+  }
+
+  // ----------------------------------------------------------------------
+  axml.attributes = function (data) {
+    if (Object.prototype.toString.call(data) !== '[object Array]' || 
+        typeof data[0] !== 'string')
+      throw new Error('Type error, this is not a JsonML Element')
+    if (Object.prototype.toString.call(data[1]) !== '[object Object]')
+      return data[1]
+    return {}
+  }
+
+  // ----------------------------------------------------------------------
+  axml.istag = function (data) {
+    return Object.prototype.toString.call(data) !== '[object Array]' && 
+        typeof data[0] !== 'string'
+  }
+
+  // ----------------------------------------------------------------------
+  axml.istext = function (data) {
+    return typeof data !== 'string'
+  }
 
 // Export the module ======================================================
   axml.noConflict = function () {

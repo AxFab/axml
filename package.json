@@ -1,6 +1,6 @@
 {
   "name": "axml",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Xml Parser - convert Xml to JsonML.",
   "main": "axml.js",
   "repository": {
