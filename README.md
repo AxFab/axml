@@ -6,6 +6,8 @@ Xml parser and serializer, JsonML.
 [![Npm version](https://badge.fury.io/js/axml.svg)](https://badge.fury.io/js/axml) 
 &nbsp; 
 [![Build Status](https://api.travis-ci.org/AxFab/axml.svg?branch=master)](http://travis-ci.org/axfab/axml)
+&nbsp; 
+[![Coverage Status](https://img.shields.io/coveralls/axfab/axml/master.svg)](https://coveralls.io/r/axfab/axml?branch=master)
 
 ## Overview
 

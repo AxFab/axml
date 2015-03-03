@@ -92,6 +92,7 @@
     this.super_ = stream.Transform
     stream.Transform.call (this)
     this._init (options)
+    this.obj = this
   }
 
   // ======================================================================
@@ -131,13 +132,37 @@
         else if (stBy (txt, '<'))     l = { k:eTo(txt, '>'), t:'ELEMENT' }
         else  l = { k:eTo(txt, '<')-1, t:'TEXT' }
 
-        if (l.k > 0) {
+        if (this.block != null) {
+          var m = txt.search(this.block.regexp)
+          if (m < 0) {
+            this.data = txt
+            callback()
+            return
+          } else {
+            // console.log (m)
+            var src = txt.substring(0, m)
+            txt = txt.substring(m)
+          //   // for (var i=0; i<m.length; ++i)
+          //   //   m[i] = m[i].substring(0, 45)
+            this.block.callback (src)
+            this.block = null
+          }
+
+        } else if (l.k > 0) {
           l.s = txt.substring (0, l.k)
           txt = txt.substring (l.k)
           var line = countLine (l.s);
           // console.log (l)
-          if (this[l.t])
-            this[l.t] (this, l);
+          if (axml['prepare_' + l.t])
+            l = axml['prepare_' + l.t] (l);
+          if (this[l.t]) {
+            try {
+              this.block = this[l.t] (this.obj, l);
+            } catch (err) {
+              console.log (l.s)
+              throw err
+            }
+          }
           this.line += line;
 
         } else {
@@ -176,6 +201,37 @@
     })
     streamFs.pipe (streamXml)
   }
+
+  // ======================================================================
+  axml.prepare_TEXT = function (node) {
+    node.name = '#text'
+    return node
+  }
+
+  // ----------------------------------------------------------------------
+  axml.prepare_ELEMENT = function (node) {
+
+    if (node.s.endswith('/>'))
+      node.closed = true
+
+    if (node.s[1] == '/') {
+      node.name = node.s.substring(2, node.s.length - 1).trim()
+      node.closing = true
+    } else {
+      node.n = node.s.substring (1, node.s.length - (node.closed ? 2 : 1))
+      var k = node.n.indexOf (' ')
+      node.name = (k > 0) ? node.n.substring (0, k) : node.n
+
+      if (k > 0) {
+        node.attr = node.n.substring (k)
+        node.attributes = axml.parseAttributes (node.attr)
+      }
+    }
+
+    node.name = node.name.toUpperCase()
+    return node
+  }
+
 
   // ======================================================================
   axml.JSONML_TEXT = function (prv, node) {
@@ -248,8 +304,9 @@
       if (scope == '=') {
         if (string[i] == '"') scope = '"'
         else if (string[i] == '\'') scope = '\''
-        else console.log ('ERROR ' , string[i])
-      } else if (scope == '\'' || scope == '"') {
+        else scope = ' '
+          // console.log ('ERROR ' , string, i)
+      } else if (scope == '\'' || scope == '"' || scope == ' ') {
         if (string[i] == scope) {
           attrs [variable] = value
           variable = ''
@@ -360,6 +417,29 @@
   axml.istext = function (data) {
     return typeof data !== 'string'
   }
+
+
+  // Iterator function =====================================================
+  axml.foreach = function (data, callback) {
+    if (Object.prototype.toString.call(data) !== '[object Array]' || 
+        typeof data[0] !== 'string')
+      throw new Error('Type error, this is not a JsonML Element')
+
+    for (var i=axml.start(data); i<data.length; ++i)
+      callback (data[i])
+  }
+
+  // ----------------------------------------------------------------------
+  axml.elements = function (data, name, callback) {
+    // name is optional
+    if (callback == null) { callback = name; name = null; } 
+
+    axml.foreach (data, function (child) {
+      if (axml.istag(data[i]) && (name == null || axml.name(child) == name))
+        callback (child)
+    })
+  }
+
 
 // Export the module ======================================================
   axml.noConflict = function () {
