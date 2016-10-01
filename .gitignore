@@ -1,6 +1,5 @@
-
 # =======================================================
-# GitIgnore '.gitignore'
+# GitIgnore '.gitignore' for JS code
 #     Fabien B. <fabien.bavent@gmail.com>
 #
 # This program is distributed in the hope that it will be useful,
@@ -8,37 +7,22 @@
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # =======================================================
 
-# -------------------------------------------------------
-# We work with black-listed folders but white-listed files
+# Use file white-list and folder black-list
 *
 !*/
 
-# -------------------------------------------------------
-# Remove classic directory
-.*/
+# Remove building folders
 [Bb]in/
+[Cc]overage/
 [Nn]ode_modules/
 
-# -------------------------------------------------------
-# Add repository files
-!.gitignore
-!.travis.yml
-!README*
-!LICENSE*
-!COPYING*
-!CONTRIB*
-!Makefile
-
-# -------------------------------------------------------
-# Add all possible source files
+# Add source file
 !*.js
 !*.json
 
-# -------------------------------------------------------
-# Add building information and scripts
-!*.mk
-!*.xml
+# Add repository files
 !*.md
-
-# -------------------------------------------------------
-# -------------------------------------------------------
+!.git*
+!.npm*
+!.travis.yml
+![A-Z]*

@@ -1,4 +1,16 @@
 language: node_js
 node_js:
+  - "6"
+  - "5"
+  - "4"
+  - "0.12"
   - "0.11"
   - "0.10"
+  - "node"
+  - "iojs"
+env:
+  - JDX_VERBOSE=true
+after_success: npm run coveralls
+addons:
+  code_climate:
+    repo_token: gPvTmOfmfznBtNQRAyQ2Rp2TEgpWZedbA

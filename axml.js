@@ -28,435 +28,400 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+'use strict';
 
-(function () {
-  var previous_mod, root = this
-  if (root != null)
-    previous_mod = root.axml
-  
-// Dependancies ===========================================================
-  var fs = root.fs
-  if( typeof fs === 'undefined' ) {
-    if( typeof require !== 'undefined' ) {
-      fs = require('fs')
-    }
-    else throw new Error('axml requires fs');
-  }
+var fs = fs || require('fs'),
+    stream = stream || require('stream');
 
-  var stream = root.stream
-  if( typeof stream === 'undefined' ) {
-    if( typeof require !== 'undefined' ) {
-      stream = require('stream')
-    }
-    else throw new Error('axml requires stream');
-  }
+var axml = (function () {
 
-// String extentions ======================================================
+  var SGML = {
 
-  String.prototype.trim=function() {
-    return this.replace(/^\s+|\s+$/g, '');
-  }
+    // Look for the next block on the buffer.
+    nextBlock: function (chunk)
+    {
+      if (/^<!\[CDATA\[/.test(chunk)) {
+        return { type: 'CDATA', size: chunk.indexOf(']]>') + 3, };
+      } else if (/^<\?/.test(chunk)) {
+        return { type: 'DECLARATION', size: chunk.indexOf('?>') + 2, };
+      } else if (/^<!--/.test(chunk)) {
+        return { type: 'COMMENT', size: chunk.indexOf('-->') + 3, };
+      } else if (/^<!/.test(chunk)) {
+        return { type: 'DOCTYPE', size: chunk.indexOf('>') + 1, };
+      } else if (/^</.test(chunk)) {
+        return { type: 'ELEMENT', size: chunk.indexOf('>') + 1, };
+      } else {
+        return { type: 'TEXT', size: chunk.indexOf('<'), };
+      }
+    },
 
-  // ----------------------------------------------------------------------
-  String.prototype.ltrim=function() {
-    return this.replace(/^\s+/,'');
-  }
+    createText: function (chunk)
+    {
+      return { type: 'TEXT', size: chunk.length, litteral:chunk };
+    },
 
-  // ----------------------------------------------------------------------
-  String.prototype.rtrim=function() {
-    return this.replace(/\s+$/,'');
-  }
-
-  // ----------------------------------------------------------------------
-  String.prototype.fulltrim=function() {
-    return this.replace(/(?:(?:^|\n)\s+|\s+(?:$|\n))/g,'').replace(/\s+/g,' ');
-  }
-
-  // ----------------------------------------------------------------------
-  String.prototype.startswith=function(str) {
-    return this.substring(0, str.length) == str;
-  }
-
-  // ----------------------------------------------------------------------
-  String.prototype.endswith=function(str) {
-    return this.substring(this.length - str.length, this.length) == str;
-  }
-
-
-// Module axml =========================================================
-
-  var axml = function (options) {
-    if (!(this instanceof axml))
-      return new axml(options);
-
-    this.super_ = stream.Transform
-    stream.Transform.call (this)
-    this._init (options)
-    this.obj = this
-  }
-
-  // ======================================================================
-  axml.prototype = Object.create (stream.Transform.prototype, {})
-
-  // ----------------------------------------------------------------------
-  axml.prototype._transform = function(chunk, encoding, callback) {
-
-    var countLine = function(str) {
-      if (!this.line)
-        this.line = 1
-      var k = -1, l = 0
-      while ((k = str.indexOf("\n", k+1)) >= 0) l++;
+    // Count the number of new-lines in a chunk of text.
+    countLine: function(chunk)
+    {
+      var k = -1, l = 0;
+      while ((k = chunk.indexOf("\n", k+1)) >= 0) {
+        l++;
+      }
       return l;
-    }
+    },
 
-    var stBy = function (txt, sfx) {
-      return txt.startswith (sfx)
-    }
+    prepare: function(block) 
+    {
+      var text = block.litteral;
+      // Check this is a close-tag '</name>'. 
+      if (text[1] == '/') {
+        block.name = text.substring(2, text.length - 1).replace(/^\s+|\s+$/g, '');
+        block.closing = true;
+        return;
+      } 
 
-    var eTo = function (txt, pfx) {
-      var k = 0
-      while (!txt.substring(0,k).endswith (pfx) && txt.length > k) k++;
-      return txt.length > k ? k : null
-    }
+      // Check that tag is closing itself:  '<name />'. 
+      if (/\/>$/.test(text)) {
+        block.closed = true;
+      }
 
-    try {
-      if (!this.data)
-        this.data = ''
-      var txt = this.data + chunk.toString()
-      var l;
-      for (; ; ) {
-        if (stBy (txt, '<![CDATA['))  l = { k:eTo(txt, ']]>'), t:'CDATA' }
-        else if (stBy (txt, '<?'))    l = { k:eTo(txt, '?>'), t:'DECLARATION' }
-        else if (stBy (txt, '<!--'))  l = { k:eTo(txt, '-->'), t:'COMMENT' }
-        else if (stBy (txt, '<!'))    l = { k:eTo(txt, '>'), t:'DOCTYPE' }
-        else if (stBy (txt, '<'))     l = { k:eTo(txt, '>'), t:'ELEMENT' }
-        else  l = { k:eTo(txt, '<')-1, t:'TEXT' }
+      // Split name and attributes
+      text = text.substring(1, text.length - (block.closed ? 2 : 1));
+      var k = text.indexOf (' ');
+      block.name = (k > 0) ? text.substring (0, k) : text;
+      block.attributes = {};
+      if (k > 0) {
+        var attributes = text.substring(k);
+        block.attributes = SGML.attributes(attributes);
+      }
+    },
 
-        if (this.block != null) {
-          var m = txt.search(this.block.regexp)
-          if (m < 0) {
-            this.data = txt
-            callback()
-            return
+    attributes: function(string)
+    {
+      var attributes = {},
+          value = '', // Last value read.
+          variable = '', // Last variable read.
+          scope = ''; // Symbol of parsing state.
+
+      for (var i = 0; i < string.length; ++i) {
+        if (scope == '=') {
+          if (string[i] == '"') {
+            scope = '"';
+          } else if (string[i] == '\'') {
+            scope = '\'';
+          } else { 
+            scope = ' ';
+          }
+        } else if (scope == '\'' || scope == '"' || scope == ' ') {
+          if (string[i] == scope) {
+            // Create the attribute.
+            attributes[variable] = value; 
+            variable = '';
+            value = '';
+            scope = null;
           } else {
-            // console.log (m)
-            var src = txt.substring(0, m)
-            txt = txt.substring(m)
-          //   // for (var i=0; i<m.length; ++i)
-          //   //   m[i] = m[i].substring(0, 45)
-            this.block.callback (src)
-            this.block = null
+            value += string[i]
           }
-
-        } else if (l.k > 0) {
-          l.s = txt.substring (0, l.k)
-          txt = txt.substring (l.k)
-          var line = countLine (l.s);
-          // console.log (l)
-          if (axml['prepare_' + l.t])
-            l = axml['prepare_' + l.t] (l);
-          if (this[l.t]) {
-            try {
-              this.block = this[l.t] (this.obj, l);
-            } catch (err) {
-              console.log (l.s)
-              throw err
-            }
-          }
-          this.line += line;
-
-        } else {
-          this.data = txt
-          callback ()
-          return
+        } else if (string[i] == '=') {
+          scope = '=';
+        } else if (string[i] != ' ') {
+          variable += string[i];
+        } else if (variable != '') {
+          variable = '';
+          value = '';
+          scope = null;
         }
       }
-    } catch (e) {
-      console.log ('parsing error at: ' + this.line, e)
-      callback (e)
-    }
-  }
+      return attributes;
+    },
 
-  // ----------------------------------------------------------------------
+    decodeEscaped: function(text) {
+      var escapes = { 
+        '&amp;': '&',
+      };
+      return text.replace(/&[a-zA-Z0-9_]+;/g, function(code) {
+        if (escapes[code]) {
+          return escapes[code];
+        }
+        return code;
+      });
+    },
+
+    encodeEscaped: function(text) {
+      return text
+        .replace(/\&/g, '&amp;');
+    },
+  };
+
+  var JSONML = {
+
+    create: function () {
+      return { 
+        cursor: null,
+        root: null,
+      };
+    },
+
+    compile: function (document) {
+      return document.root[0];
+    },
+
+    TEXT: function (document, block) {
+      var text = block.litteral.replace(/^\s+|\s+$/g, '');
+      if (text === '') {
+        return;
+      }
+
+      if (!document.cursor) {
+        throw new SyntaxError('Insertion of text outside tags is forbidden.');
+      }
+      document.cursor.push (SGML.decodeEscaped(text));
+    },
+
+    ELEMENT: function (document, block) {
+
+      if (!document.root) {
+        document.cursor = document.root = [];
+        document.stack = [];
+      } else if (document.stack.length === 0) {
+        console.warn ('Element found after the root element: ' + block.name);
+      }
+
+      if (block.closing) {
+        if (document.cursor[0] !== block.name) {
+          console.warn ('Wrong closing tag: ' + block.name);
+        }
+        document.stack.pop();
+        if (document.stack.length > 0) {
+          document.cursor = document.stack[document.stack.length - 1];
+        }
+        return;
+      } 
+
+      var node = [block.name];
+      document.cursor.push (node);
+      if (block.attributes) {
+        node.push(block.attributes);
+      }
+      if (block.closed) {
+        return;
+      }
+
+      document.cursor = node;
+      document.stack.push(node);
+    },
+
+    CDATA: function (document, block) {
+      var text = block.litteral;
+      text = 'CDATA--' + text.substring(9, text.length - 3);
+      if (!document.cursor) {
+        throw new SyntaxError('Insertion of CDATA section outside tags is forbidden.');
+      }
+      document.cursor.push (text);
+    },
+  };
+
+  var parserDico = {
+    JSONML: JSONML,
+  };
+
+  var axml = function (options) 
+  {
+    this._super = stream.Transform
+    stream.Transform.call (this)
+
+    this.parser = options.parser || parserDico[options.parser] || JSONML;
+    this.document = this.parser.create();
+    this.buffer = '';
+    this.row = 1;
+  };
+
+  axml.prototype = Object.create (stream.Transform.prototype);
+
+  axml.prototype._transform = function(chunk, encoding, callback) {
+    try {
+
+      this.buffer += chunk.toString();
+      for (;;) {
+        var block = SGML.nextBlock(this.buffer);
+        if (block.size <= 0) {
+          return callback();
+        }
+        block.litteral = this.buffer.substring(0, block.size);
+        this.buffer = this.buffer.substring(block.size);
+        if (block.type === 'ELEMENT') {
+          SGML.prepare(block);
+        }
+        if (this.parser[block.type]) {
+          this.parser[block.type](this.document, block);
+        }
+        this.row += SGML.countLine(block.litteral);
+      }
+    } catch(ex) {
+      console.error('Parsing error at line ' + this.row, ex);
+      return callback(ex);
+    }
+  };
+
   axml.prototype._flush = function(callback) {
-    callback (null, this.top)
-  }
+    var block = SGML.createText(this.buffer);
+    this.buffer = '';
+    if (this.parser[block.type]) {
+      this.parser[block.type](this.document, block);
+    }
+    callback (null, this.parser.compile(this.document));
+  };
 
-  // ----------------------------------------------------------------------
-  axml.prototype._init = function (opt) {
-    if (!opt) opt = {}
-    this.TEXT = opt.TEXT || axml.JSONML_TEXT
-    this.ELEMENT = opt.ELEMENT || axml.JSONML_ELEMENT
-    this.COMMENT = opt.COMMENT
-    this.DECLARATION = opt.DECLARATION
-    this.DOCTYPE = opt.DOCTYPE
-  }
+  axml.prototype.getDocument = function() {
+    if (this.compiled === null || this.compiled === undefined) {
+      this.compiled = streamXml.parser.compile(streamXml.document);
+    }
+    return this.compiled;
+  };
 
-  // ======================================================================
   axml.readFile = function (uri, callback) {
-    var streamXml = new axml()
-    var streamFs = fs.createReadStream (uri)
+    var streamXml = new axml();
+    var streamFs = fs.createReadStream (uri);
     streamXml.on('finish', function(err) {
-      callback(err, streamXml.top)
-    })
-    streamFs.pipe (streamXml)
-  }
+      callback(err, streamXml.getDocument());
+    });
+    streamFs.pipe (streamXml);
+  };
 
-  // ======================================================================
-  axml.prepare_TEXT = function (node) {
-    node.name = '#text'
-    return node
-  }
+  axml.parse = function (text, options, callback) {
+    var stream = new axml();
+    var doc = null;
+    stream._transform(text, options.encoding || 'utf-8', function() {
+      stream._flush(function (err) {
+        if (!err)
+          doc = streamXml.getDocument();
+        if (callback) {
+          callback(err, doc);
+        }
+      });
+    }); 
+    return doc;
+  };
 
-  // ----------------------------------------------------------------------
-  axml.prepare_ELEMENT = function (node) {
+  axml.stringify = function (data, options) {
+    if (!options) {
+      options = {};
+    }
+    var opt = {
+      eol: options.eol || '\n',
+      indent: options.indent || '  ',
+      _indent: options._indent || '',
+    };
 
-    if (node.s.endswith('/>'))
-      node.closed = true
+    if (data === null || data === undefined) {
+      return '';
+    } else if (typeof data === 'string') {
+      if (/^CDATA--/.test(data)) {
+        return opt._indent + '<![CDATA[' + data.substring(7) + ']]>' + opt.eol;
+      }
+      return opt._indent + data + opt.eol;
+    } 
 
-    if (node.s[1] == '/') {
-      node.name = node.s.substring(2, node.s.length - 1).trim()
-      node.closing = true
+    var xml = '';
+    var attributes = '';
+    var start = 1;
+    // TODO -- replace last requirement by array testing
+    if (data.length > 1 && typeof data[1] === 'object' && data[1].length === undefined) {
+      attributes = ' ';
+      start = 2;
+      for (var k in data[1]) {
+        attributes += k + '="' + data[1][k].toString() +'" ';
+      }
+    }
+
+    if (data.length > start) {
+      xml += opt._indent + '<' + data[0] + attributes + '>' + opt.eol;
+      for (var i = start; i < data.length; ++i) {
+        xml += axml.stringify(data[i], {
+          depth: opt.depth+1,
+          eol: opt.eol,
+          indent: opt.indent,
+          _indent: opt._indent + opt.indent,
+        });
+      }
+      xml += opt._indent + '</' + data[0] + '>' + opt.eol;
     } else {
-      node.n = node.s.substring (1, node.s.length - (node.closed ? 2 : 1))
-      var k = node.n.indexOf (' ')
-      node.name = (k > 0) ? node.n.substring (0, k) : node.n
-
-      if (k > 0) {
-        node.attr = node.n.substring (k)
-        node.attributes = axml.parseAttributes (node.attr)
-      }
+      xml += opt._indent + '<' + data[0] + attributes + '/>' + opt.eol;
     }
+    return xml;
+  };
 
-    node.name = node.name.toUpperCase()
-    return node
-  }
-
-
-  // ======================================================================
-  axml.JSONML_TEXT = function (prv, node) {
-    if (!prv.content) 
-      prv.content = []
-    if (prv.current && node.s.trim() != '')
-      prv.current.push (node.s)
-  }
-
-  // ----------------------------------------------------------------------
-  axml.JSONML_ELEMENT = function (prv, node) {
-
-    if (!prv.content) 
-      prv.content = []
-
-    if (!prv.stack) 
-      prv.stack = []
-
-    if (node.s.endswith('/>'))
-      node.closed = true
-
-    if (node.s[1] == '/') {
-      node.name = node.s.substring(2, node.s.length - 1).trim()
-
-      if (prv.current[0] != node.name)
-        console.warn ('Wrong closing tag: ' + node.name + ' at ' + prv.line );
-      prv.stack.pop()
-      prv.current =  prv.stack[prv.stack.length-1]
-      return
-    }
-
-    node.n = node.s.substring (1, node.s.length - (node.closed ? 2 : 1))
-    var k = node.n.indexOf (' ')
-    node.name = (k > 0) ? node.n.substring (0, k) : node.n
-
-    var newNode = [node.name]
-
-    if (k > 0) {
-      node.attr = node.n.substring (k)
-      // PARSE ATTR
-      var attributes = axml.parseAttributes (node.attr)
-      newNode.push (attributes)
-    }
-
-    // console.log (newNode, prv.stack)
-    if (node.closed)
-      prv.current.push (newNode)
-    else {
-
-      if (!prv.top) {
-        prv.top = newNode
-        prv.current = newNode
-      } else {
-        prv.current.push (newNode)
-      }
-
-      prv.current = newNode
-      prv.stack.push (prv.current)
-    }
-  }
-
-  // ======================================================================
-  axml.parseAttributes = function (string) {
-    var attrs = {}
-    var value = ''
-    var variable = ''
-    var scope
-
-    for (var i=0; i < string.length; ++i) {
-      if (scope == '=') {
-        if (string[i] == '"') scope = '"'
-        else if (string[i] == '\'') scope = '\''
-        else scope = ' '
-          // console.log ('ERROR ' , string, i)
-      } else if (scope == '\'' || scope == '"' || scope == ' ') {
-        if (string[i] == scope) {
-          attrs [variable] = value
-          variable = ''
-          value = ''
-          scope = null
-        } else
-          value += string[i]
-
-      } else if (string[i] == '=') {
-        scope = '='
-      } else if (string[i] != ' ') {
-        variable += string[i]
-      } else if (variable != '') {
-        variable = ''
-        value = ''
-        scope = null
-      }
-    }
-    return attrs;
-  }
-
-  // ----------------------------------------------------------------------
-  axml.stringify = function (data, opt) {
-    var str = ''
-    var attr = '' 
-
-    if (opt == null) {
-      opt = {
-        depth:0, eol:'\n', tabs:'  ',
-      }
+  axml.setParser = function(name, parser) {
+    if (parser === null || parser === undefined) {
+      delete parserDico[name];
     } else {
-      if (opt.depth == null) opt.depth = 0
-      if (opt.eol == null) opt.eol = '\n'
-      if (opt.tabs == null) opt.tabs = '  '
+      parserDico[name] = parser;
+    } 
+  };
+
+  axml.JsonMl = (function () {
+
+    var JsonMlHelper = {};
+
+    JsonMlHelper.start = function (data) {
+      if (Object.prototype.toString.call(data) !== '[object Array]' || 
+          typeof data[0] !== 'string')
+        throw new Error('Type error, this is not a JsonML Element');
+      if (Object.prototype.toString.call(data[1]) !== '[object Object]')
+        return 2;
+      return 1;
+    };
+
+    JsonMlHelper.name = function (data) {
+      if (Object.prototype.toString.call(data) !== '[object Array]' || 
+          typeof data[0] !== 'string')
+        throw new Error('Type error, this is not a JsonML Element');
+      return data[0];
     }
 
-    opt.depthPadding = ''
-    if (opt.tabs !== false) {
-      for (var i=0; i<opt.depth; ++i)
-        opt.depthPadding += tabs
-    }
-    
-    if (typeof data === 'string') {
-      return opt.depthPadding + data + opt.eol
-    }
+    JsonMlHelper.attributes = function (data) {
+      if (Object.prototype.toString.call(data) !== '[object Array]' || 
+          typeof data[0] !== 'string')
+        throw new Error('Type error, this is not a JsonML Element');
+      if (Object.prototype.toString.call(data[1]) !== '[object Object]')
+        return data[1];
+      return {};
+    };
 
-    if (data == null) {
-      return ''
-    }
+    JsonMlHelper.istag = function (data) {
+      return Object.prototype.toString.call(data) !== '[object Array]' && 
+          typeof data[0] !== 'string';
+    };
 
-    if (data.length > 1 && typeof data[1] === 'object' && data[1].length == null) {
-      attr += ' '
-      for (var k in data[1])
-        attr += k + '="'+ data[1][k].toString() +'" '
-    }
+    JsonMlHelper.istext = function (data) {
+      return typeof data !== 'string';
+    };
 
-    var haschild = (data.length > 1 && (typeof data[1] !== 'object' || data[1].length != null)) || data.length > 2
-    // console.log (data.length, data[1], data[1].length, haschild)
+    JsonMlHelper.foreach = function (data, callback) {
+      if (Object.prototype.toString.call(data) !== '[object Array]' || 
+          typeof data[0] !== 'string')
+        throw new Error('Type error, this is not a JsonML Element');
 
-    if (haschild) {
-      str += opt.depthPadding + '<' + data[0] + attr + '>' + opt.eol
-      var st = attr == '' ? 1 : 2
-      for (var i=st; i<data.length; ++i)
-        str += axml.stringify (data[i], { depth:opt.depth+1, eol:opt.eol})
-      str += opt.depthPadding + '</' + data[0] + '>' + opt.eol
-    } else {
-      str += opt.depthPadding + '<' + data[0] + attr + '/>' + opt.eol
-    }
+      for (var i=axml.start(data); i<data.length; ++i)
+        callback (data[i]);
+    };
 
-    return str
-  }
+    JsonMlHelper.elements = function (data, name, callback) {
+      // name is optional
+      if (callback == null) { callback = name; name = null; } 
 
-  // Helper function ======================================================
-  axml.start = function (data) {
-    if (Object.prototype.toString.call(data) !== '[object Array]' || 
-        typeof data[0] !== 'string')
-      throw new Error('Type error, this is not a JsonML Element')
-    if (Object.prototype.toString.call(data[1]) !== '[object Object]')
-      return 2
-    return 1
-  }
+      axml.foreach (data, function (child) {
+        if (axml.istag(data[i]) && (name == null || axml.name(child) == name))
+          callback (child);
+      });
+    };
 
-  // ----------------------------------------------------------------------
-  axml.name = function (data) {
-    if (Object.prototype.toString.call(data) !== '[object Array]' || 
-        typeof data[0] !== 'string')
-      throw new Error('Type error, this is not a JsonML Element')
-    return data[0]
-  }
+    return JsonMlHelper;
+  })();
 
-  // ----------------------------------------------------------------------
-  axml.attributes = function (data) {
-    if (Object.prototype.toString.call(data) !== '[object Array]' || 
-        typeof data[0] !== 'string')
-      throw new Error('Type error, this is not a JsonML Element')
-    if (Object.prototype.toString.call(data[1]) !== '[object Object]')
-      return data[1]
-    return {}
-  }
+  return axml;
+})();
 
-  // ----------------------------------------------------------------------
-  axml.istag = function (data) {
-    return Object.prototype.toString.call(data) !== '[object Array]' && 
-        typeof data[0] !== 'string'
-  }
-
-  // ----------------------------------------------------------------------
-  axml.istext = function (data) {
-    return typeof data !== 'string'
-  }
-
-
-  // Iterator function =====================================================
-  axml.foreach = function (data, callback) {
-    if (Object.prototype.toString.call(data) !== '[object Array]' || 
-        typeof data[0] !== 'string')
-      throw new Error('Type error, this is not a JsonML Element')
-
-    for (var i=axml.start(data); i<data.length; ++i)
-      callback (data[i])
-  }
-
-  // ----------------------------------------------------------------------
-  axml.elements = function (data, name, callback) {
-    // name is optional
-    if (callback == null) { callback = name; name = null; } 
-
-    axml.foreach (data, function (child) {
-      if (axml.istag(data[i]) && (name == null || axml.name(child) == name))
-        callback (child)
-    })
-  }
-
-
-// Export the module ======================================================
-  axml.noConflict = function () {
-    root.axml = previous_mod
-    return axml
-  }
-
-  if (typeof module !== 'undefined' && module.exports) // Node.js
-    module.exports = axml
-  else if (typeof exports !== 'undefined')
-    exports = module.exports = axml
-  else if (typeof define !== 'undefined' && define.amd) // AMD / RequireJS
-    define([], function () { return axml })
-  else // Browser
-    root.axml = axml
-  
-}).call(this)
-
-// ------------------------------------------------------------------------
-// ------------------------------------------------------------------------
+if (typeof module !== 'undefined' && module.exports) {// Node.js
+  module.exports = axml;
+}
