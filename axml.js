@@ -89,7 +89,6 @@ var axml = (function () {
       text = text.substring(1, text.length - (block.closed ? 2 : 1));
       var k = text.indexOf (' ');
       block.name = (k > 0) ? text.substring (0, k) : text;
-      block.attributes = {};
       if (k > 0) {
         var attributes = text.substring(k);
         block.attributes = SGML.attributes(attributes);
@@ -101,7 +100,8 @@ var axml = (function () {
       var attributes = {},
           value = '', // Last value read.
           variable = '', // Last variable read.
-          scope = ''; // Symbol of parsing state.
+          scope = '', // Symbol of parsing state.
+          count = 0;
 
       for (var i = 0; i < string.length; ++i) {
         if (scope == '=') {
@@ -115,6 +115,7 @@ var axml = (function () {
         } else if (scope == '\'' || scope == '"' || scope == ' ') {
           if (string[i] == scope) {
             // Create the attribute.
+            count++;
             attributes[variable] = value; 
             variable = '';
             value = '';
@@ -132,7 +133,7 @@ var axml = (function () {
           scope = null;
         }
       }
-      return attributes;
+      return count > 0 ? attributes : undefined;
     },
 
     decodeEscaped: function(text) {
@@ -227,6 +228,7 @@ var axml = (function () {
 
   var axml = function (options) 
   {
+    if (!options) options = {};
     this._super = stream.Transform
     stream.Transform.call (this)
 
@@ -274,7 +276,7 @@ var axml = (function () {
 
   axml.prototype.getDocument = function() {
     if (this.compiled === null || this.compiled === undefined) {
-      this.compiled = streamXml.parser.compile(streamXml.document);
+      this.compiled = this.parser.compile(this.document);
     }
     return this.compiled;
   };
@@ -289,12 +291,13 @@ var axml = (function () {
   };
 
   axml.parse = function (text, options, callback) {
+    if (!options) options = {};
     var stream = new axml();
     var doc = null;
     stream._transform(text, options.encoding || 'utf-8', function() {
       stream._flush(function (err) {
         if (!err)
-          doc = streamXml.getDocument();
+          doc = stream.getDocument();
         if (callback) {
           callback(err, doc);
         }
@@ -319,7 +322,7 @@ var axml = (function () {
       if (/^CDATA--/.test(data)) {
         return opt._indent + '<![CDATA[' + data.substring(7) + ']]>' + opt.eol;
       }
-      return opt._indent + data + opt.eol;
+      return opt._indent + SGML.encodeEscaped(data) + opt.eol;
     } 
 
     var xml = '';
@@ -327,15 +330,21 @@ var axml = (function () {
     var start = 1;
     // TODO -- replace last requirement by array testing
     if (data.length > 1 && typeof data[1] === 'object' && data[1].length === undefined) {
-      attributes = ' ';
       start = 2;
       for (var k in data[1]) {
-        attributes += k + '="' + data[1][k].toString() +'" ';
+        attributes += ' ' + k + '="' + data[1][k].toString() +'"';
       }
     }
 
-    if (data.length > start) {
+    if (data.length <= start) {
+      xml += opt._indent + '<' + data[0] + attributes + '/>' + opt.eol;
+    } else if (start + 1 === data.length && typeof data[start] === 'string') {
+      xml += opt._indent + '<' + data[0] + attributes + '>'
+      xml += SGML.encodeEscaped(data[start]);
+      xml += '</' + data[0] + '>' + opt.eol;
+    } else {
       xml += opt._indent + '<' + data[0] + attributes + '>' + opt.eol;
+
       for (var i = start; i < data.length; ++i) {
         xml += axml.stringify(data[i], {
           depth: opt.depth+1,
@@ -345,8 +354,6 @@ var axml = (function () {
         });
       }
       xml += opt._indent + '</' + data[0] + '>' + opt.eol;
-    } else {
-      xml += opt._indent + '<' + data[0] + attributes + '/>' + opt.eol;
     }
     return xml;
   };
@@ -359,65 +366,7 @@ var axml = (function () {
     } 
   };
 
-  axml.JsonMl = (function () {
-
-    var JsonMlHelper = {};
-
-    JsonMlHelper.start = function (data) {
-      if (Object.prototype.toString.call(data) !== '[object Array]' || 
-          typeof data[0] !== 'string')
-        throw new Error('Type error, this is not a JsonML Element');
-      if (Object.prototype.toString.call(data[1]) !== '[object Object]')
-        return 2;
-      return 1;
-    };
-
-    JsonMlHelper.name = function (data) {
-      if (Object.prototype.toString.call(data) !== '[object Array]' || 
-          typeof data[0] !== 'string')
-        throw new Error('Type error, this is not a JsonML Element');
-      return data[0];
-    }
-
-    JsonMlHelper.attributes = function (data) {
-      if (Object.prototype.toString.call(data) !== '[object Array]' || 
-          typeof data[0] !== 'string')
-        throw new Error('Type error, this is not a JsonML Element');
-      if (Object.prototype.toString.call(data[1]) !== '[object Object]')
-        return data[1];
-      return {};
-    };
-
-    JsonMlHelper.istag = function (data) {
-      return Object.prototype.toString.call(data) !== '[object Array]' && 
-          typeof data[0] !== 'string';
-    };
-
-    JsonMlHelper.istext = function (data) {
-      return typeof data !== 'string';
-    };
-
-    JsonMlHelper.foreach = function (data, callback) {
-      if (Object.prototype.toString.call(data) !== '[object Array]' || 
-          typeof data[0] !== 'string')
-        throw new Error('Type error, this is not a JsonML Element');
-
-      for (var i=axml.start(data); i<data.length; ++i)
-        callback (data[i]);
-    };
-
-    JsonMlHelper.elements = function (data, name, callback) {
-      // name is optional
-      if (callback == null) { callback = name; name = null; } 
-
-      axml.foreach (data, function (child) {
-        if (axml.istag(data[i]) && (name == null || axml.name(child) == name))
-          callback (child);
-      });
-    };
-
-    return JsonMlHelper;
-  })();
+  axml.JsonMl = require('./jsonml.js');
 
   return axml;
 })();
