@@ -14,7 +14,7 @@ var axml = axml || require ('../axml.js'),
   };
 
   suite.test('Simple parse and stringify', function (assert, done) {
-    var xml = 
+    var xml =
       '<person created="2006-11-11T19:23" modified="2006-12-31T23:59">\n' +
       '  <firstName>Robert</firstName>\n' +
       '  <lastName>Smith</lastName>\n' +
@@ -25,12 +25,12 @@ var axml = axml || require ('../axml.js'),
       '    <postalCode>98765-4321</postalCode>\n' +
       '  </address>\n' +
       '</person>\n';
-    var jsonml = 
+    var jsonml =
       ["person",
         {"created":"2006-11-11T19:23", "modified":"2006-12-31T23:59"},
         ["firstName", "Robert"],
         ["lastName", "Smith"],
-        ["address", 
+        ["address",
           {"type":"home"},
           ["street", "12345 Sixth Ave"],
           ["city", "Anytown"],
@@ -42,8 +42,8 @@ var axml = axml || require ('../axml.js'),
   });
 
   suite.test('Comment, Escape and Closed tags', function (assert, done) {
-    var xml = 
-      '<?xml version="1.0" ?>\n' + 
+    var xml =
+      '<?xml version="1.0" ?>\n' +
       '<person name="Paul"  >\n' +
       '  <information />\n' +
       '  <contact/>\n' +
@@ -52,14 +52,14 @@ var axml = axml || require ('../axml.js'),
       '    Richmond &amp; Co.\n' +
       '  </employer>\n' +
       '</person>\n';
-    var jsonml = 
+    var jsonml =
       ["person",
         {"name":"Paul"},
         ["information"],
         ["contact"],
         ["employer", "Richmond & Co." ]
       ];
-    var result = 
+    var result =
       '<person name="Paul">\n' +
       '  <information/>\n' +
       '  <contact/>\n' +
@@ -70,14 +70,14 @@ var axml = axml || require ('../axml.js'),
 
 
   suite.test('Cross text and tags', function (assert, done) {
-    var xml = 
-      '<?xml version="1.0" ?>\n' + 
+    var xml =
+      '<?xml version="1.0" ?>\n' +
       '<paragraphe author="John Ruskin" >\n' +
       '  La suprême récompense du <strong>travail</strong>' +
       '  n\'est pas ce qu\'il vous <emphasis>permet de gagner</emphasis>, mais ce qu\'il' +
       ' vous permet de <strong>devenir</strong>.' +
       '</paragraphe>\n';
-    var jsonml = 
+    var jsonml =
       ["paragraphe",
         {"author":"John Ruskin"},
         "La suprême récompense du",
@@ -88,9 +88,9 @@ var axml = axml || require ('../axml.js'),
         ["strong", "devenir"],
         "."
       ];
-    var result = 
+    var result =
       '<paragraphe author="John Ruskin">\n' +
-      '  La suprême récompense du\n'+ 
+      '  La suprême récompense du\n'+
       '  <strong>travail</strong>\n' +
       '  n\'est pas ce qu\'il vous\n' +
       '  <emphasis>permet de gagner</emphasis>\n' +
@@ -100,6 +100,30 @@ var axml = axml || require ('../axml.js'),
       '</paragraphe>\n';
     wayAndBack(assert, done, xml, jsonml, result);
   });
+
+  suite.test('Read file', function (assert, done) {
+    var jsonml = [
+      'note',
+      { 'importance':'low', 'received': '2017-11-14'},
+      ['to', 'Tove'],
+      ['from', 'Jani'],
+      ['heading', 'Reminder'],
+      ['body', 'Don\'t forget me this weekend!'],
+    ];
+
+    axml.readFile('tests/sample01.xml', function (err, result) {
+      assert.isEquals(JSON.stringify(jsonml), JSON.stringify(result));
+      done();
+    });
+  });
+
+  suite.test('Large file', function (assert, done) {
+    axml.readFile('tests/sample02.xml', function (err, result) {
+      assert.isEquals(err, undefined);
+      done();
+    });
+  });
+
 
   // TODO -- CDATA, DOCTYPE, Errors, readFile, setParser
 

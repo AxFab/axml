@@ -203,6 +203,9 @@ var axml = (function () {
       }
 
       if (!document.cursor) {
+        if (text.replace(/^\s+|\s+$/g, '') === '') {
+          return;
+        }
         throw new SyntaxError('Insertion of text outside tags is forbidden.');
       }
       document.cursor.push (SGML.decodeEscaped(text));
@@ -259,7 +262,7 @@ var axml = (function () {
   {
     if (!options) options = {};
     this._super = stream.Transform
-    stream.Transform.call (this)
+    stream.Writable.call (this)
 
     this.parser = options.parser || parserDico[options.parser] || JSONML;
     this.document = this.parser.create();
@@ -268,12 +271,11 @@ var axml = (function () {
     this.options = options;
   };
 
-  axml.prototype = Object.create (stream.Transform.prototype);
+  axml.prototype = Object.create (stream.Writable.prototype);
 
-  axml.prototype._transform = function(chunk, encoding, callback) {
+  axml.prototype._write = function(chunk, encoding, callback) {
     try {
-
-      this.buffer += chunk.toString();
+      this.buffer += chunk.toString('UTF-8');
       for (;;) {
         var block = SGML.nextBlock(this.buffer);
         if (block.size <= 0) {
@@ -295,11 +297,11 @@ var axml = (function () {
     }
   };
 
-  axml.prototype._flush = function(callback) {
+  axml.prototype._final = function(callback) {
     var block = SGML.createText(this.buffer);
     this.buffer = '';
     if (this.parser[block.type]) {
-      this.parser[block.type](this.document, block);
+      this.parser[block.type](this.document, block, this.options);
     }
     callback (null, this.parser.compile(this.document));
   };
@@ -311,9 +313,13 @@ var axml = (function () {
     return this.compiled;
   };
 
-  axml.readFile = function (uri, callback) {
-    var streamXml = new axml();
-    var streamFs = fs.createReadStream (uri);
+  axml.readFile = function (uri, opt, callback) {
+    if (!callback) {
+      callback = opt;
+      opt = {};
+    }
+    var streamXml = new axml(opt);
+    var streamFs = fs.createReadStream(uri);
     streamXml.on('finish', function(err) {
       callback(err, streamXml.getDocument());
     });
@@ -324,8 +330,8 @@ var axml = (function () {
     if (!options) options = {};
     var stream = new axml(options);
     var doc = null;
-    stream._transform(text, options.encoding || 'utf-8', function() {
-      stream._flush(function (err) {
+    stream._write(text, options.encoding || 'utf-8', function() {
+      stream._final(function (err) {
         if (!err)
           doc = stream.getDocument();
         if (callback) {
@@ -343,7 +349,7 @@ var axml = (function () {
     if (!opt) {
       opt = {
         eol: '\n',
-        indent: '\n',
+        indent: '  ',
       };
     }
     if (!opt._indent) {
