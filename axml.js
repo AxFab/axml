@@ -1,7 +1,7 @@
 /*!
     Axml
    Copyright 2014-2015 Fabien Bavent
-  
+
     ---------------------------------------------------------------------
 
   All rights reserved.
@@ -13,8 +13,8 @@
   * Redistributions in binary form must reproduce the above copyright
     notice, this list of conditions and the following disclaimer in the
     documentation and/or other materials provided with the distribution.
-  * Neither the name of the author nor of its contributors may be used to 
-    endorse or promote products derived from this software without specific 
+  * Neither the name of the author nor of its contributors may be used to
+    endorse or promote products derived from this software without specific
     prior written permission.
 
   THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND ANY
@@ -70,17 +70,18 @@ var axml = (function () {
       return l;
     },
 
-    prepare: function(block) 
+    prepare: function(block, opt)
     {
       var text = block.litteral;
-      // Check this is a close-tag '</name>'. 
+      // Check this is a close-tag '</name>'.
       if (text[1] == '/') {
         block.name = text.substring(2, text.length - 1).replace(/^\s+|\s+$/g, '');
         block.closing = true;
+        // console.log (block);
         return;
-      } 
+      }
 
-      // Check that tag is closing itself:  '<name />'. 
+      // Check that tag is closing itself:  '<name />'.
       if (/\/>$/.test(text)) {
         block.closed = true;
       }
@@ -92,6 +93,12 @@ var axml = (function () {
       if (k > 0) {
         var attributes = text.substring(k);
         block.attributes = SGML.attributes(attributes);
+      }
+
+      if (!block.closing && opt.autoClose) {
+        if (opt.autoClose.indexOf(block.name.toLowerCase()) >= 0) {
+          block.closed = true;
+        }
       }
     },
 
@@ -105,18 +112,16 @@ var axml = (function () {
 
       for (var i = 0; i < string.length; ++i) {
         if (scope == '=') {
-          if (string[i] == '"') {
-            scope = '"';
-          } else if (string[i] == '\'') {
-            scope = '\'';
-          } else { 
+          if (string[i] == '"' || string[i] == '\'') {
+            scope = string[i];
+          } else {
             scope = ' ';
           }
         } else if (scope == '\'' || scope == '"' || scope == ' ') {
           if (string[i] == scope) {
             // Create the attribute.
             count++;
-            attributes[variable] = value; 
+            attributes[variable] = value;
             variable = '';
             value = '';
             scope = null;
@@ -137,7 +142,7 @@ var axml = (function () {
     },
 
     decodeEscaped: function(text) {
-      var escapes = { 
+      var escapes = {
         '&amp;': '&',
       };
       return text.replace(/&[a-zA-Z0-9_]+;/g, function(code) {
@@ -157,7 +162,7 @@ var axml = (function () {
   var JSONML = {
 
     create: function () {
-      return { 
+      return {
         cursor: null,
         root: null,
       };
@@ -190,14 +195,14 @@ var axml = (function () {
 
       if (block.closing) {
         if (document.cursor[0] !== block.name) {
-          console.warn ('Wrong closing tag: ' + block.name);
+          console.warn ('Wrong closing tag: ' + block.name + ', expect ' + document.cursor[0]);
         }
         document.stack.pop();
         if (document.stack.length > 0) {
           document.cursor = document.stack[document.stack.length - 1];
         }
         return;
-      } 
+      }
 
       var node = [block.name];
       document.cursor.push (node);
@@ -226,7 +231,7 @@ var axml = (function () {
     JSONML: JSONML,
   };
 
-  var axml = function (options) 
+  var axml = function (options)
   {
     if (!options) options = {};
     this._super = stream.Transform
@@ -236,6 +241,7 @@ var axml = (function () {
     this.document = this.parser.create();
     this.buffer = '';
     this.row = 1;
+    this.options = options;
   };
 
   axml.prototype = Object.create (stream.Transform.prototype);
@@ -252,7 +258,7 @@ var axml = (function () {
         block.litteral = this.buffer.substring(0, block.size);
         this.buffer = this.buffer.substring(block.size);
         if (block.type === 'ELEMENT') {
-          SGML.prepare(block);
+          SGML.prepare(block, this.options);
         }
         if (this.parser[block.type]) {
           this.parser[block.type](this.document, block);
@@ -292,7 +298,7 @@ var axml = (function () {
 
   axml.parse = function (text, options, callback) {
     if (!options) options = {};
-    var stream = new axml();
+    var stream = new axml(options);
     var doc = null;
     stream._transform(text, options.encoding || 'utf-8', function() {
       stream._flush(function (err) {
@@ -302,19 +308,23 @@ var axml = (function () {
           callback(err, doc);
         }
       });
-    }); 
+    });
     return doc;
   };
 
-  axml.stringify = function (data, options) {
+  axml.stringify = function (data, options, opt) {
     if (!options) {
       options = {};
     }
-    var opt = {
-      eol: options.eol || '\n',
-      indent: options.indent || '  ',
-      _indent: options._indent || '',
-    };
+    if (!opt) {
+      opt = {
+        eol: '\n',
+        indent: '\n',
+      };
+    }
+    if (!opt._indent) {
+      opt._indent = '';
+    }
 
     if (data === null || data === undefined) {
       return '';
@@ -323,7 +333,7 @@ var axml = (function () {
         return opt._indent + '<![CDATA[' + data.substring(7) + ']]>' + opt.eol;
       }
       return opt._indent + SGML.encodeEscaped(data) + opt.eol;
-    } 
+    }
 
     var xml = '';
     var attributes = '';
@@ -336,8 +346,12 @@ var axml = (function () {
       }
     }
 
-    if (data.length <= start) {
-      xml += opt._indent + '<' + data[0] + attributes + '/>' + opt.eol;
+    var autoClose = options.autoClose && options.autoClose.indexOf(data[0]) >= 0;
+    if (data.length <= start && (!options.noClosed || autoClose)) {
+      if (autoClose)
+        xml += opt._indent + '<' + data[0] + attributes + '>' + opt.eol;
+      else
+        xml += opt._indent + '<' + data[0] + attributes + '/>' + opt.eol;
     } else if (start + 1 === data.length && typeof data[start] === 'string') {
       xml += opt._indent + '<' + data[0] + attributes + '>'
       xml += SGML.encodeEscaped(data[start]);
@@ -346,7 +360,7 @@ var axml = (function () {
       xml += opt._indent + '<' + data[0] + attributes + '>' + opt.eol;
 
       for (var i = start; i < data.length; ++i) {
-        xml += axml.stringify(data[i], {
+        xml += axml.stringify(data[i], options, {
           depth: opt.depth+1,
           eol: opt.eol,
           indent: opt.indent,
@@ -363,10 +377,20 @@ var axml = (function () {
       delete parserDico[name];
     } else {
       parserDico[name] = parser;
-    } 
+    }
   };
 
   axml.JsonMl = require('./jsonml.js');
+
+  axml.HTML = {
+    autoClose: [
+      'input',
+      'link',
+      'meta',
+      'img',
+    ],
+    noClosed: true
+  };
 
   return axml;
 })();
