@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>AxFab</title>
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,200i,300,300i,600" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="dist/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="dist/css/font-awesome.css">
+  </head>
+  <body>
+    <div class="hidden alert alert-small alert-warning alert-dismissible" role="alert">
+      <div class="container">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <strong>Help!</strong> Please can you please help me translate or correct this language. <a class="btn btn-xs btn-info">Contribute to translation</a>
+      </div>
+    </div>
+    <header>
+      <h1>SmokeOS</h1>
+      <!-- <big>A hobbyist operating system project developed from scratch.</big> -->
+      <!-- <big>स्क्रैच से विकसित एक शौकिया ऑपरेटिंग सिस्टम प्रोजेक्ट</big> -->
+      <big>ಒಂದು ಹವ್ಯಾಸಿ ಆಪರೇಟಿಂಗ್ ಸಿಸ್ಟಮ್ ಯೋಜನೆಯು ಆರಂಭದಿಂದ ಅಭಿವೃದ್ಧಿಪಡಿಸಿತು.</big>
+      <!-- <big>Разработанный с нуля проект операционной системы хобби.</big> -->
+      <a href="https://github.com/axfab/smokeos">
+        <i class="fa fa-github fa-wz" style="font-size: 1.5em;"></i>
+        GitHub repository
+      </a>
+      <a href="#releases">
+        <i class="fa fa-download fa-wz" style="font-size: 1.5em;"></i>
+        Download
+      </a>
+      <a href="#manual">
+        <i class="fa fa-book fa-wz" style="font-size: 1.5em;"></i>
+        User manual
+      </a>
+      <span class="top">
+
+        <a class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          EN <span class="caret"></span>
+        </a>
+        <ul class="dropdown-menu">
+          <li><a href="#"><i class="fa fa-check pull-right"></i>English</a></li>
+          <li><a href="#">French</a></li>
+          <li><a href="#">Spanish</a></li>
+          <li><a href="#">German</a></li>
+          <li><a href="#">Russian</a></li>
+          <li><a href="#">Hindi</a></li>
+          <li role="separator" class="divider"></li>
+          <li><a href="#">Help translation</a></li>
+        </ul>
+        <a href="./"><i class="fa fa-user"></i></a>
+        <a href="./"><i class="fa fa-home"></i></a>
+      </span>
+    </header>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-9">
+
+          <p>xOS is a hobbyist operating system project written mostly from scratch for the PC, entirely in <a href="http://flatassembler.net">FASM-style assembly</a>. The principal goal of xOS is to be compact and lightweight, yet be suitable for use in the 21<sup>st</sup> century, in terms of speed, features and hardware support.</p>
+
+          <p class="well"><i class="fa fa-quote-left fa-2x fa-pull-left" aria-hidden="true"></i><em>Most of the important things in the world have been accomplished by people who have kept on trying when there seemed to be no hope at all.</em></p>
+
+        </div>
+        <div class="col-sm-3 hidden-xs">​
+          <img src="..." class="img-responsive img-thumbnail center-block" alt="The Os box">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12">
+
+
+          <h1>Features</h1>
+          <ul>
+          <li><strong>Fast.</strong> xOS can start in less than 5 seconds on a Pentium 4 with 512 MB of RAM.</li>
+          <li><strong>Small.</strong> The binaries without data (such as wallpapers) are less than 1 MB.</li>
+          <li><strong>Lightweight.</strong> A booted system uses less than 32 MB of RAM.</li>
+          <li><strong>Graphical.</strong> xOS includes a compositing windowed graphical user interface.</li>
+          <li><strong>Common hardware.</strong> xOS supports VESA BIOSes, PS/2, ACPI, PCI, ATA &amp; SATA hard disks.</li>
+          <li><strong>Self-hosting.</strong> xOS is capable of building itself under itself.</li>
+          <li><strong>USB.</strong> xOS currently supports USB 1.1 with keyboards and mice.</li>
+          <li><strong>Networking.</strong> xOS features a somewhat functional TCP/IP stack and a web browser.</li>
+          </ul>
+
+          <h1>Take a look</h1>
+          <p>I commit regularly to the <a href="https://github.com/omarrx024/xos">GitHub repository</a>. Every time I commit, the file <code>disk.hdd</code> in the repository is updated, which can be considered the latest unstable build. Please give feedback using GitHub issues or by emailing me at <a href="mailto:omarx024@gmail.com">omarx024@gmail.com</a>.</p>
+
+          <h2>Running xOS</h2>
+          <p>Running xOS is very simple. Whether you have the latest unstable build or a release build, you will have an HDD file, which can be attached to the IDE or SATA controller in <a href="https://www.virtualbox.org/wiki/VirtualBox">VirtualBox</a>, where xOS runs best. For networking in VirtualBox, open the network settings page, set the adapter type to any one of the Intel Pro/1000 options, and set the "attached to" field to NAT. xOS needs about 32 MB of RAM to boot, while over 64 MB is recommended for networking.</p>
+
+        </div>
+      </div>
+
+      <div class="row">
+
+        <div class="col-md-12">
+          <h2>Screenshots</h2>
+          <p>Click on an image to enlarge it.</p>
+        </div>
+
+        <div class="col-lg-3 col-md-4 col-sm-6">
+          <a href="img/smk_01.png"><img src="img/smk_01.png" width="320" class="img-responsive img-thumbnail center-block" /></a>
+          <p><em>Kernel console - Debug mode.</em></p>
+        </div>
+
+        <div class="col-lg-3 col-md-4 col-sm-6">
+          <a href="img/smk_02.png"><img src="img/smk_02.png" width="320" class="img-responsive img-thumbnail center-block" /></a>
+          <p><em>System splash screen.</em></p>
+        </div>
+
+        <div class="col-lg-3 col-md-4 col-sm-6">
+          <a href="img/smk_03.png"><img src="img/smk_03.png" width="320" class="img-responsive img-thumbnail center-block" /></a>
+          <p><em>System desktop login screen.</em></p>
+        </div>
+
+        <div class="col-lg-3 col-md-4 col-sm-6">
+          <a href="img/smk_04.png"><img src="img/smk_04.png" width="320" class="img-responsive img-thumbnail center-block" /></a>
+          <p><em>A clean desktop just after the boot.</em></p>
+        </div>
+
+        <div class="col-lg-3 col-md-4 col-sm-6">
+          <a href="img/smk_05.png"><img src="img/smk_05.png" width="320" class="img-responsive img-thumbnail center-block" /></a>
+          <p><em>The desktop with several windows.</em></p>
+        </div>
+
+        <div class="col-lg-3 col-md-4 col-sm-6">
+          <a href="img/smk_06.png"><img src="img/smk_06.png" width="320" class="img-responsive img-thumbnail center-block" /></a>
+          <p><em>Apps and web browser.</em></p>
+        </div>
+
+      </div>
+
+      <div class="row">
+
+        <div class="col-lg-6">
+
+          <div class="panel">
+            <div class="panel-heading panel-primary">
+              <h3>Original kernel</h3>
+            </div>
+            <div class="panel-body">
+              <p>SmokeOS incude it's own kernel. This means it's not yet another Linux distribution.
+                The design is entierly original even if still close to Unix philosophy.
+                For interoperability sake, I tried to include some of NT design (Windows).</p>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-heading panel-primary">
+              <h3>Standard C library</h3>
+            </div>
+            <div class="panel-body">
+              <p>A doubt that trouble me for quitte some time is the standard library.
+                Should I use an exising one or create my own.
+                As I needed to implement some of the feature for my kernel anyway I decided to give it a try.
+                This gave me more freedom to design the kernel ABI. For the time being, I'm focusing on one standard version at a time. I just completed StdC89, and starting StdC95.</p>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-heading panel-primary">
+              <h3>Virtual File-system</h3>
+            </div>
+            <div class="panel-body">
+              <p>While still under heavy refactoring, the design I choose for the VFS is really closed to Linux. I tried as much as possible to simplify driver development, especially testing.
+                Did I succeeded, only other developers might tell...</p>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="col-lg-6">
+
+          <div class="panel">
+            <div class="panel-heading panel-primary">
+              <h3>Frame manager</h3>
+            </div>
+            <div class="panel-body">
+              <p>One area where there was much to do (still do) is the windows manager.
+                Unix machine use mostly the X11 deamon, while proprietary system prefer to handle most of the drawing.
+                I wanted to avoid re-routing of the messages while still let freedom to the frame applications.
+                Sadly, none of the existing API suit me enough to achieve this goal.
+                So I went to a solution inspired of Linux frame-buffers. However instead of mapping only physical display, my kernel can allocate one frame-buffer for each window.
+                All the logic of the manager being keeped on the kernel, allowing fast and easy event dispatch.</p>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-heading panel-primary">
+              <h3>And many more...</h3>
+            </div>
+            <div class="panel-body">
+              <p>My OS is still a young pup and I need more time to try some of the countless ideas I have.
+                That's all the fun to create a raw system, everything looks possible...
+                My first objective right now is fixing some issues with signals and multi-threading (stable context-switchng is not that easy), starting my network stack and take a glance at ARM porting.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div> <!-- .container -->
+    <div>
+
+      <div class="container">
+
+        <div class="row">
+
+          <div class="col-md-12">
+
+            <h1 class="section-title">Test coverage</h1>
+
+            <p>
+              Coverage of <b>82.0%</b> on a total of <b>334</b> source lines.
+              Launched the <b>29 Oct 2017</b>.
+              <div class="progress">
+                <div class="progress-bar" role="progressbar" aria-valuenow="82" aria-valuemin="0" aria-valuemax="100" style="width: 82%;">
+                  <span class="sr-only">82% Complete</span>
+                </div>
+              </div>
+            </p>
+
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Filename</th>
+                  <th colspan="3">Line coverage</th>
+                  <th colspan="2">Function</th>
+                </tr>
+              </thead>
+              <tbody id="coverage_table">
+                <tr>
+                  <td>{{filename}}</td>
+                  <td>
+                    <div class="progress" style="min-width: 80px;">
+                      <div class="progress-bar progress-bar-{{color}} progress-bar-striped" role="progressbar" aria-valuenow="{{cov_line}}" aria-valuemin="0" aria-valuemax="100" style="width: {{cov_line}}%;">
+                        <span class="sr-only">{{cov_line}}% Complete</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="text-center"><b>{{cov_line}}%</b></td>
+                  <td>{{coverdlines}}/{{sourcelines}}</td>
+                  <td class="text-center"><b>{{cov_function}}%</b></td>
+                  <td>{{coverdfunctions}}/{{functions}}</td>
+                </tr>
+              </tbody>
+            </table>
+
+
+          </div>
+        </div>
+
+      </div> <!-- .container -->
+    </div>
+
+    <footer>
+      <div class="container">
+        <div class="row">
+          <div class="col-md-12">
+            <q>It is vain, if we plant an oak, to hope to shelter soon under its foliage.</q>
+            <span class="pull-right">Antoine de Saint Exupéry (Terre des hommes)</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+    <script type="text/javascript" src="dist/js/jquery.min.js"></script>
+    <script type="text/javascript" src="dist/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="dist/js/app.js"></script>
+  </body>
+</html>

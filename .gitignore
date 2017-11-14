@@ -19,6 +19,8 @@
 # Add source file
 !*.js
 !*.json
+!*.xml
+!*.html
 
 # Add repository files
 !*.md
