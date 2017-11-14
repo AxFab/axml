@@ -111,14 +111,14 @@ var axml = axml || require ('../axml.js'),
       ['body', 'Don\'t forget me this weekend!'],
     ];
 
-    axml.readFile('tests/sample01.xml', function (err, result) {
+    axml.readFile(__dirname + '/sample01.xml', function (err, result) {
       assert.isEquals(JSON.stringify(jsonml), JSON.stringify(result));
       done();
     });
   });
 
   suite.test('Large file', function (assert, done) {
-    axml.readFile('tests/sample02.xml', function (err, result) {
+    axml.readFile(__dirname + '/sample02.xml', function (err, result) {
       assert.isEquals(err, undefined);
       done();
     });

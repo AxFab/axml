@@ -7,7 +7,7 @@ var axml = axml || require ('../axml.js'),
 
   suite.test('Basic parsing of HTML', function (assert, done) {
 
-    axml.readFile('tests/sample01.html', axml.HTML, function (err, result) {
+    axml.readFile(__dirname + '/sample01.html', axml.HTML, function (err, result) {
       assert.isEquals(err, undefined);
       done();
     });

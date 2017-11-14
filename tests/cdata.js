@@ -13,7 +13,7 @@ var axml = axml || require ('../axml.js'),
       ['alternative', 'CDATA--This text contains a CEND ]','CDATA--]>'],
     ];
 
-    axml.readFile('tests/sample03.xml', function (err, result) {
+    axml.readFile(__dirname + '/sample03.xml', function (err, result) {
       assert.isEquals(JSON.stringify(jsonml), JSON.stringify(result));
       done();
     });
