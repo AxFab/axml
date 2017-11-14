@@ -143,8 +143,23 @@ var axml = (function () {
 
     decodeEscaped: function(text) {
       var escapes = {
+        '&lsquo;': '‘',
+        '&rsquo;': '’',
+        '&sbquo;': '‚',
         '&amp;': '&',
+        '&rdquo;': '“',
+        '&sdquo;': '”',
+        '&permil;': '‰',
+        '&quot;': '"',
+        '&frasl;': '/',
+        '&lt;': '<',
+        '&gt;': '>',
+        '&hellip;': '…',
+        '&ndash;': '–',
+        '&mdash;': '—',
+        '&nbsp;': ' ', // TODO Right one !
       };
+
       return text.replace(/&[a-zA-Z0-9_]+;/g, function(code) {
         if (escapes[code]) {
           return escapes[code];
@@ -155,7 +170,9 @@ var axml = (function () {
 
     encodeEscaped: function(text) {
       return text
-        .replace(/\&/g, '&amp;');
+        .replace(/\&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
     },
   };
 
@@ -172,8 +189,15 @@ var axml = (function () {
       return document.root[0];
     },
 
-    TEXT: function (document, block) {
-      var text = block.litteral.replace(/^\s+|\s+$/g, '');
+    TEXT: function (document, block, opt) {
+      var text;
+      if (opt.whiteSpace === 'preserve') {
+        text = block.litteral
+      } else if (opt.whiteSpace === 'collapse') {
+        text = block.litteral.replace(/\s+/g, ' ');
+      } else {
+        text = block.litteral.replace(/^\s+|\s+$/g, '');
+      }
       if (text === '') {
         return;
       }
@@ -184,7 +208,7 @@ var axml = (function () {
       document.cursor.push (SGML.decodeEscaped(text));
     },
 
-    ELEMENT: function (document, block) {
+    ELEMENT: function (document, block, opt) {
 
       if (!document.root) {
         document.cursor = document.root = [];
@@ -217,7 +241,7 @@ var axml = (function () {
       document.stack.push(node);
     },
 
-    CDATA: function (document, block) {
+    CDATA: function (document, block, opt) {
       var text = block.litteral;
       text = 'CDATA--' + text.substring(9, text.length - 3);
       if (!document.cursor) {
@@ -261,7 +285,7 @@ var axml = (function () {
           SGML.prepare(block, this.options);
         }
         if (this.parser[block.type]) {
-          this.parser[block.type](this.document, block);
+          this.parser[block.type](this.document, block, this.options);
         }
         this.row += SGML.countLine(block.litteral);
       }
@@ -383,6 +407,7 @@ var axml = (function () {
   axml.JsonMl = require('./jsonml.js');
 
   axml.HTML = {
+    whiteSpace: 'collapse',
     autoClose: [
       'input',
       'link',
